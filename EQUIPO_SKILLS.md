@@ -1,5 +1,4 @@
-# Equipo Full de Skills — Urbamed MVP Mi-Paciente.com
->
+# Equipo Full de Skills — Barber IA
 > 33 skills globales + 1 local | Actualizado con Golden Stack ArkiTech
 
 **SkillS GloBales:** Ruta de Skills Globales C:\Users\siste\.agent\skills

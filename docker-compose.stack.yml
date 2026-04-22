@@ -1,0 +1,62 @@
+version: "3.7"
+
+services:
+  salon-ia-app:
+    image: ghcr.io/veteranoql69/salon.ia:latest
+    networks:
+      - DesaNet
+
+    environment:
+      # ── Supabase (autohosteado) ────────────────────────────────────────
+      - NEXT_PUBLIC_SUPABASE_URL=https://supa.manmec.cl
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzE1MDUwODAwLAogICJleHAiOiAxODcyODE3MjAwCn0.DEqzh0_3FhR3ZfcmFM_ha9ZoKCm3ChwB84ImguXc9Fo
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogInNlcnZpY2Vfcm9sZSIsCiAgImlzcyI6ICJzdXBhYmFzZSIsCiAgImlhdCI6IDE3MTUwNTA4MDAsCiAgImV4cCI6IDE4NzI4MTcyMDAKfQ.c9JvzwUcX_GxGJqzeSMINv-5z9R5gAJ4hKGs8Tk336w
+      # ── IA ────────────────────────────────────────────────────────────
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # ── Runtime ───────────────────────────────────────────────────────
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+      labels:
+        # ── Traefik HTTPS ────────────────────────────────────────────────
+        - traefik.enable=true
+        - traefik.http.routers.salon-ia.rule=Host(`salon.sditecnologia.cl`)
+        - traefik.http.routers.salon-ia.entrypoints=websecure
+        - traefik.http.routers.salon-ia.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.salon-ia.service=salon-ia
+        - traefik.http.services.salon-ia.loadbalancer.server.port=3000
+        - traefik.http.services.salon-ia.loadbalancer.passHostHeader=true
+        # ── Redirect HTTP → HTTPS ────────────────────────────────────────
+        - traefik.http.routers.salon-ia-http.rule=Host(`salon.sditecnologia.cl`)
+        - traefik.http.routers.salon-ia-http.entrypoints=web
+        - traefik.http.routers.salon-ia-http.middlewares=redirect-to-https@docker
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true
+
+networks:
+  DesaNet:
+    external: true
+    name: DesaNet

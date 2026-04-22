@@ -59,6 +59,8 @@ Extrae la lógica de negocio fuera de los componentes de UI.
 
 Todo acceso a la base de datos debe realizarse a través del SDK oficial de Supabase. Usa @supabase/ssr para la gestión segura de cookies/sesiones en Server Actions y Route Handlers, y @supabase/supabase-js en el cliente.
 
+Convención de Nomenclatura Estricta: Todas las tablas en la base de datos (y roles definidos mediante enums) DEBEN llevar el prefijo "brb_". Por ejemplo: brb_profiles, brb_customers, brb_appointments. Ninguna tabla puede ser creada sin este prefijo.
+
 Todo acceso debe estar fuertemente tipado usando los tipos generados de Supabase (Database types).
 
 Respeta las políticas de RLS (Row Level Security). El código en el servidor usará el Service Role Key SOLO cuando sea estrictamente necesario para tareas en background o webhooks de pago.
