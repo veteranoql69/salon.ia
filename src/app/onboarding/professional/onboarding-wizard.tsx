@@ -63,7 +63,7 @@ export function ProfessionalOnboardingWizard() {
       if (res?.error) throw new Error(res.error);
       
       if (formData.workMode === 'join_rut') {
-        toast.success(`Solicitud enviada a ${res.salonName}. Espere aprobación.`);
+        toast.success(`Solicitud enviada a ${(res as any).salonName}. Espere aprobación.`);
         router.push("/onboarding/pending-approval");
       } else {
         toast.success("¡Bienvenido al ecosistema Salon.IA!");

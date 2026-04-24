@@ -97,7 +97,7 @@ export default function AgendaDashboardPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label>Hora de Inicio</label>
-                  <Select value={startTime} onValueChange={setStartTime}>
+                  <Select value={startTime} onValueChange={(val) => val && setStartTime(val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Inicio" />
                     </SelectTrigger>
@@ -110,7 +110,7 @@ export default function AgendaDashboardPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <label>Hora de Fin</label>
-                  <Select value={endTime} onValueChange={setEndTime}>
+                  <Select value={endTime} onValueChange={(val) => val && setEndTime(val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Fin" />
                     </SelectTrigger>

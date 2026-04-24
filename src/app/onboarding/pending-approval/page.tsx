@@ -1,6 +1,7 @@
 import { Clock, MessageSquare, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function PendingApprovalPage() {
   return (
@@ -27,17 +28,26 @@ export default function PendingApprovalPage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <Button asChild variant="outline" className="h-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 font-bold uppercase tracking-widest text-xs">
-            <Link href="/onboarding">
-              <ArrowLeft className="mr-2 w-4 h-4" /> Volver al Inicio
-            </Link>
-          </Button>
+          <Link 
+            href="/onboarding" 
+            className={cn(
+              buttonVariants({ variant: "outline" }), 
+              "h-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 font-bold uppercase tracking-widest text-xs flex items-center justify-center"
+            )}
+          >
+            <ArrowLeft className="mr-2 w-4 h-4" /> Volver al Inicio
+          </Link>
           
-          <Button asChild className="h-14 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs">
-            <Link href="https://wa.me/56912345678" target="_blank">
-              <MessageSquare className="mr-2 w-4 h-4" /> Contactar Soporte
-            </Link>
-          </Button>
+          <Link 
+            href="https://wa.me/56912345678" 
+            target="_blank"
+            className={cn(
+              buttonVariants({ variant: "default" }), 
+              "h-14 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center hover:bg-primary/90"
+            )}
+          >
+            <MessageSquare className="mr-2 w-4 h-4" /> Contactar Soporte
+          </Link>
         </div>
 
         <p className="text-[10px] text-muted-foreground/40 uppercase tracking-[0.3em] font-bold">

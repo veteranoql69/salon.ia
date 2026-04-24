@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
 export function ConciergeGreeting() {
-  const { messages, append, status } = useChat({ api: "/api/chat" });
+  const { messages, append, status } = useChat({ api: "/api/chat" } as any) as any;
   const hasGreeted = useRef(false);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export function ConciergeGreeting() {
 
   // Only show the last assistant message
   const lastAiMessage = messages
-    .filter((m) => m.role === "assistant")
+    .filter((m: any) => m.role === "assistant")
     .pop();
 
   return (
