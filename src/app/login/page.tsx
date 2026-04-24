@@ -154,14 +154,16 @@ export default function LoginPage() {
   const supabase = createClient()
 
   const handleGoogleLogin = async () => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        redirectTo: `${siteUrl}/auth/callback`,
         queryParams: { prompt: 'select_account' }
       },
     })
   }
+
 
   return (
     <div
