@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/'
 
   if (code) {
     const supabase = await createClient()
@@ -15,16 +15,19 @@ export async function GET(request: Request) {
       // Determine role from DB to route correctly immediately after login
       const { data: profile } = await supabase
         .from('brb_profiles')
-        .select('role')
+        .select('role, onboarding_completed')
         .eq('id', session.user.id)
         .maybeSingle()
 
-      const role = profile?.role || 'CLIENT'
-      
-      // Override the 'next' parameter if they are an OWNER/BARBER
-      const targetUrl = (role === 'OWNER' || role === 'BARBER') ? '/dashboard' : '/'
+      let targetUrl = '/onboarding' // Default: new users go to onboarding
 
-      const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
+      if (profile?.onboarding_completed) {
+        // Existing users with completed onboarding go to dashboard
+        const role = profile.role || 'CLIENT'
+        targetUrl = (role === 'OWNER' || role === 'BARBER') ? '/dashboard' : '/'
+      }
+
+      const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
 
       if (isLocalEnv) {
@@ -39,4 +42,4 @@ export async function GET(request: Request) {
 
   // return the user to an error page with instructions
   return NextResponse.redirect(`${origin}/login?error=Could not authenticate with provider`)
-}
+}
