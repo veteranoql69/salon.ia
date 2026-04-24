@@ -45,39 +45,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── 2. Deploy vía SSH (Directo al Servidor) ─────────────────────────────
-  deploy-ssh:
-    name: Deploy to Swarm via SSH
-    needs: build-and-push
-    runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code (para el stack file)
-        uses: actions/checkout@v4
-
-      - name: Copy stack file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "docker-compose.stack.yml"
-          target: "/opt/salon-ia/"
-
-      - name: SSH Remote Commands (Redeploy)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            # Forzar descarga de la nueva imagen
-            docker pull ghcr.io/veteranoql69/salon.ia:latest
-            
-            # Desplegar/Actualizar el stack en Swarm
-            docker stack deploy \
-              --with-registry-auth \
-              --compose-file /opt/salon-ia/docker-compose.stack.yml \
-              salon-ia
-            
-            echo "✅ Salon.IA actualizado exitosamente"
