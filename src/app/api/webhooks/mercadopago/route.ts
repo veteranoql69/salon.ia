@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { createClient } from '@supabase/supabase-js';
 
-// We use the raw supabase-js client with the SERVICE_ROLE key here
-// because webhooks are backend-to-backend and don't have a user session cookie.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-dummy-token',
-});
+// Force this route to be dynamic (never statically analyzed at build time)
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  // Instantiate clients INSIDE the handler so build-time evaluation never runs
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  const client = new MercadoPagoConfig({
+    accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-dummy-token',
+  });
+
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || url.searchParams.get('topic');
