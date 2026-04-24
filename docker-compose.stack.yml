@@ -12,7 +12,7 @@ services:
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzE1MDUwODAwLAogICJleHAiOiAxODcyODE3MjAwCn0.DEqzh0_3FhR3ZfcmFM_ha9ZoKCm3ChwB84ImguXc9Fo
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogInNlcnZpY2Vfcm9sZSIsCiAgImlzcyI6ICJzdXBhYmFzZSIsCiAgImlhdCI6IDE3MTUwNTA4MDAsCiAgImV4cCI6IDE4NzI4MTcyMDAKfQ.c9JvzwUcX_GxGJqzeSMINv-5z9R5gAJ4hKGs8Tk336w
       # ── IA ────────────────────────────────────────────────────────────
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY=AIzaSyBi4gNgKWhDz8Y0oPKG3ETr3m6vYE31Kh0
       # ── Runtime ───────────────────────────────────────────────────────
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0

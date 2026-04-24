@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: veteranoql69/salon.ia
 
 jobs:
-  # ─── Build & Push imagen a GHCR ────────────────────────────────────────
+  # ─── 1. Build & Push imagen a GHCR ────────────────────────────────────────
   build-and-push:
     name: Build & Push Image
     runs-on: ubuntu-latest
@@ -33,37 +33,51 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
-
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # Variables NEXT_PUBLIC_* se incrustan en el bundle estático en build-time
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           build-args: |
             NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Notificar a Portainer para redeploy automático ────────────────────
-  notify-portainer:
-    name: Trigger Portainer Redeploy
+  # ─── 2. Deploy vía SSH (Directo al Servidor) ─────────────────────────────
+  deploy-ssh:
+    name: Deploy to Swarm via SSH
     needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger Portainer Stack Webhook
-        run: |
-          curl -s -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
-          echo "✅ Portainer webhook triggered - salon-ia stack redeploying"
+      - name: Checkout code (para el stack file)
+        uses: actions/checkout@v4
+
+      - name: Copy stack file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docker-compose.stack.yml"
+          target: "/opt/salon-ia/"
+
+      - name: SSH Remote Commands (Redeploy)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            # Forzar descarga de la nueva imagen
+            docker pull ghcr.io/veteranoql69/salon.ia:latest
+            
+            # Desplegar/Actualizar el stack en Swarm
+            docker stack deploy \
+              --with-registry-auth \
+              --compose-file /opt/salon-ia/docker-compose.stack.yml \
+              salon-ia
+            
+            echo "✅ Salon.IA actualizado exitosamente"

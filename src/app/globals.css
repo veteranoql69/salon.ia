@@ -146,6 +146,20 @@ body {
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    /* Custom Scrollbar for UI Components */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.1);
+      border-radius: 20px;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.3);
+    }
     scroll-padding-top: 80px; /* offset for fixed navbar */
   }
 }

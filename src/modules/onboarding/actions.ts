@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 export async function createOrganizationAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -73,7 +73,7 @@ export async function createOrganizationAction(formData: FormData) {
 }
 
 export async function joinProfessionalAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -131,7 +131,7 @@ export async function joinProfessionalAction(formData: FormData) {
 }
 
 export async function joinOrganizationByRutAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -171,7 +171,7 @@ export async function joinOrganizationByRutAction(formData: FormData) {
 }
 
 export async function createIndependentProfessionalAction(formData: FormData) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -230,7 +230,7 @@ export async function createIndependentProfessionalAction(formData: FormData) {
 }
 
 export async function completeClientOnboardingAction() {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {

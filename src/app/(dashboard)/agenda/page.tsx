@@ -83,8 +83,8 @@ export default function AgendaDashboardPage() {
           <p className="text-muted-foreground">Gestiona tus citas y tu disponibilidad.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button variant="destructive">Bloquear Horario Personal</Button>
+          <DialogTrigger render={<Button variant="destructive" />}>
+            Bloquear Horario Personal
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
