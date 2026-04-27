@@ -67,7 +67,7 @@ export function ProfessionalOnboardingWizard() {
         router.push("/onboarding/pending-approval");
       } else {
         toast.success("¡Bienvenido al ecosistema Salon.IA!");
-        router.push("/dashboard");
+        router.push(`/${(res as any).slug}/dashboard`);
       }
     } catch (error: any) {
       toast.error(error.message || "Error al procesar su perfil");

@@ -1,6 +1,34 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { generateSlug } from "@/lib/utils/slug";
+import { sendInviteEmail } from "@/lib/email/invite";
+
+function generateInviteCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "BRB-";
+  for (let i = 0; i < 4; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+async function generateUniqueSlug(supabase: Awaited<ReturnType<typeof createClient>>, name: string): Promise<string> {
+  const base = generateSlug(name)
+  const { data } = await supabase
+    .from('brb_organizations')
+    .select('slug')
+    .like('slug', `${base}%`)
+
+  if (!data || data.length === 0) return base
+
+  const existing = data.map((r: { slug: string }) => r.slug)
+  if (!existing.includes(base)) return base
+
+  let n = 2
+  while (existing.includes(`${base}-${n}`)) n++
+  return `${base}-${n}`
+}
 
 export async function createOrganizationAction(formData: FormData) {
   const supabase = await createClient();
@@ -16,26 +44,60 @@ export async function createOrganizationAction(formData: FormData) {
   const businessType = formData.get("businessType") as string;
   const location = formData.get("location") as string;
   const chairsCount = parseInt(formData.get("chairs") as string) || 1;
+  const inviteEmails = formData.getAll("inviteEmails") as string[];
+
+  // Ensure brb_profiles row exists before inserting org (FK requirement).
+  // Uses admin client to bypass RLS — new users have no profile row yet.
+  const admin = createAdminClient();
+  const { error: profileUpsertError } = await admin.from("brb_profiles").upsert(
+    {
+      id: authData.user.id,
+      full_name:
+        authData.user.user_metadata?.full_name ||
+        authData.user.user_metadata?.name ||
+        authData.user.email,
+      email: authData.user.email,
+    },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
+  if (profileUpsertError) {
+    console.error("Profile upsert error:", profileUpsertError);
+    return { error: "No se pudo crear tu perfil." };
+  }
+
+  const slug = await generateUniqueSlug(supabase, name)
+
+  const orgPayload: Record<string, unknown> = {
+    owner_id: authData.user.id,
+    name,
+    slug,
+    rut: rut || null,
+    phone_whatsapp: phone,
+    business_type: businessType,
+    address: location || null,
+  }
 
   // 1. Create Organization
-  const { data: orgData, error: orgError } = await supabase
+  let { data: orgData, error: orgError } = await supabase
     .from("brb_organizations")
-    .insert([
-      {
-        owner_id: authData.user.id,
-        name,
-        rut: rut || null,
-        phone_whatsapp: phone,
-        business_type: businessType,
-        address: location || null,
-      }
-    ])
+    .insert([orgPayload])
     .select()
     .single();
 
+  // If slug column doesn't exist yet (migration pending), retry without it
+  if (orgError && (orgError.code === '42703' || orgError.message?.includes('slug'))) {
+    const { slug: _slug, ...payloadWithoutSlug } = orgPayload;
+    void _slug;
+    ({ data: orgData, error: orgError } = await supabase
+      .from("brb_organizations")
+      .insert([payloadWithoutSlug])
+      .select()
+      .single());
+  }
+
   if (orgError) {
-    console.error("Org Error:", orgError);
-    return { error: "Hubo un inconveniente al registrar su salón. Verifique si el nombre o RUT ya están en uso." };
+    console.error("Org Error code:", orgError.code, "| message:", orgError.message, "| details:", orgError.details, "| hint:", orgError.hint);
+    return { error: `DB error ${orgError.code}: ${orgError.message}` };
   }
 
   // 2. Update user profile explicitly to set role to OWNER and associate org
@@ -69,7 +131,62 @@ export async function createOrganizationAction(formData: FormData) {
     }
   }
 
-  return { success: true, orgId: orgData.id };
+  // 4. Create invite codes and send emails
+  const validEmails = inviteEmails.filter((e) => e && e.includes("@"));
+  if (validEmails.length > 0) {
+    const { data: ownerProfile } = await supabase
+      .from("brb_profiles")
+      .select("full_name")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+    const inviterName = ownerProfile?.full_name || authData.user.email || "El dueño";
+
+    for (const email of validEmails) {
+      const code = generateInviteCode();
+      const { error: inviteInsertError } = await supabase.from("brb_invite_codes").insert({
+        org_id: orgData.id,
+        code,
+        invited_email: email,
+        sent_at: new Date().toISOString(),
+      });
+      if (inviteInsertError) {
+        console.error("[invite insert] email:", email, "error:", inviteInsertError);
+      }
+      const emailResult = await sendInviteEmail({ to: email, inviterName, salonName: name, code });
+      if (emailResult?.error) {
+        console.error("[sendInviteEmail] failed for", email, emailResult.error);
+      } else {
+        console.log("[sendInviteEmail] sent to", email);
+      }
+    }
+  }
+
+  return { success: true, orgId: orgData.id, slug: orgData.slug };
+}
+
+export async function getInviteInfoAction(code: string) {
+  if (!code) return { error: "Código vacío" };
+  const admin = createAdminClient();
+
+  const { data: invite } = await admin
+    .from("brb_invite_codes")
+    .select("org_id")
+    .eq("code", code)
+    .is("used_by", null)
+    .maybeSingle();
+
+  if (!invite) return { error: "Código inválido o ya utilizado" };
+
+  const { data: org } = await admin
+    .from("brb_organizations")
+    .select("name, slug")
+    .eq("id", invite.org_id)
+    .maybeSingle();
+
+  if (!org) return { error: "Organización no encontrada" };
+
+  return { name: org.name, slug: org.slug };
 }
 
 export async function joinProfessionalAction(formData: FormData) {
@@ -127,7 +244,14 @@ export async function joinProfessionalAction(formData: FormData) {
       .eq('id', inviteData.chair_id);
   }
 
-  return { success: true };
+  // Fetch org slug for redirect
+  const { data: org } = await supabase
+    .from('brb_organizations')
+    .select('slug')
+    .eq('id', inviteData.org_id)
+    .maybeSingle()
+
+  return { success: true, slug: org?.slug };
 }
 
 export async function joinOrganizationByRutAction(formData: FormData) {
@@ -179,8 +303,10 @@ export async function createIndependentProfessionalAction(formData: FormData) {
   }
 
   const name = formData.get("name") as string;
-  const specialty = formData.get("specialty") as string;
   const phone = formData.get("phone") as string;
+
+  const orgName = `${name} - Independiente`
+  const slug = await generateUniqueSlug(supabase, orgName)
 
   // 1. Create a "Personal Organization" for the independent professional
   const { data: orgData, error: orgError } = await supabase
@@ -188,7 +314,8 @@ export async function createIndependentProfessionalAction(formData: FormData) {
     .insert([
       {
         owner_id: authData.user.id,
-        name: `${name} - Independiente`,
+        name: orgName,
+        slug,
         business_type: 'independiente',
         phone_whatsapp: phone,
       }
@@ -226,7 +353,7 @@ export async function createIndependentProfessionalAction(formData: FormData) {
       }
     ]);
 
-  return { success: true };
+  return { success: true, slug: orgData.slug };
 }
 
 export async function completeClientOnboardingAction() {

@@ -17,38 +17,31 @@ export default async function Home() {
     return <LandingPage />;
   }
 
-  // Get user profile to determine role
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("brb_profiles")
-    .select("role, full_name")
+    .select("role, full_name, org_id")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError) {
-    console.error("Critical RLS or Database error fetching profile:", profileError);
-    // If it's the recursion error (code 42P17), we might still want to try 
-    // to determine if they are an owner by some other means or just fail gracefully.
-    // For now, if there is a profile error, we consider the person a client by default 
-    // to avoid a full crash, but we log it clearly.
-  }
-
   const role = profile?.role;
   const name = profile?.full_name || "Usuario";
-  
-  if (user) {
-    console.log(`[Home Route] User ${user.email} accessed. Determined role from DB: ${role || 'MISSING'}`);
-  }
 
   // Si no tiene rol asignado o es PENDING, forzamos Onboarding
   if (!role || role === "PENDING") {
-    console.log(`[Home Route] Redirecting to /onboarding (Role: ${role || 'MISSING'})`);
-    redirect("/onboarding");
+    redirect("/onboarding/owner");
   }
 
-  // Redirigir a los especialistas/gerentes a su Dashboard Premium
   if (role === "OWNER" || role === "BARBER") {
-    console.log(`[Home Route] Redirecting ${role} to /dashboard`);
-    redirect("/dashboard");
+    if (profile?.org_id) {
+      const { data: org } = await supabase
+        .from("brb_organizations")
+        .select("slug")
+        .eq("id", profile.org_id)
+        .maybeSingle()
+
+      if (org?.slug) redirect(`/${org.slug}/dashboard`)
+    }
+    redirect("/onboarding/owner")
   }
 
   // Vista para CLIENT

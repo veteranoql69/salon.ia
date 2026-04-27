@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Rutas públicas: no requieren sesión
-  const publicPaths = ['/login', '/auth', '/landing']
+  const publicPaths = ['/login', '/auth', '/landing', '/api/']
   const isPublic =
     pathname === '/' ||
     publicPaths.some((p) => pathname.startsWith(p))

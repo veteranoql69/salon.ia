@@ -1,31 +1,82 @@
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamText, convertToModelMessages, createTextStreamResponse, stepCountIs } from 'ai';
+import { getClientTransactionLogs } from '@/lib/ai/tools';
+import { NextResponse } from 'next/server';
 
-// Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  try {
+    const { messages, customerSearchTerm } = await req.json();
 
-  const result = streamText({
-    model: google('gemini-1.5-pro-latest'),
-    system: `Eres el "Concierge de Lujo" de Salon.IA. 
-    Tu objetivo es dar una bienvenida premium, elegante y profesional a los nuevos usuarios.
-    Habla con un tono sofisticado, minimalista y servicial. 
-    
-    Contexto: El usuario acaba de registrarse y está en la fase de Onboarding (estado PENDING).
-    Debes guiarlo suavemente para que elija su perfil: 
-    - Gerente/Dueño de Salón (Control total, multi-sucursal, finanzas).
-    - Especialista/Barbero (Agenda propia, atención VIP, vinculado a un salón).
-    
-    Instrucciones: 
-    1. Da una bienvenida corta y potente. 
-    2. Menciona que Salon.IA está diseñado para elevar su negocio al siguiente nivel.
-    3. Pregunta cómo desea iniciar su viaje hoy.
-    
-    No uses emojis en exceso, mantén la estética "Dark/Gold Luxury".`,
-    messages,
-  });
+    const googleProvider = createGoogleGenerativeAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    });
 
-  return result.toTextStreamResponse();
+    const systemPrompt = `
+      Eres el Asistente Inteligente Principal de Salon.IA. 
+      Eres un CRM proactivo y "Concierge de Lujo". Tu trabajo no es solo responder preguntas, sino anticiparte.
+      Si un cliente te pregunta por disponibilidad o por su cuenta, SIEMPRE utiliza la herramienta 'getClientTransactionLogs'
+      con el término de búsqueda proporcionado (customerSearchTerm) para conocer su historial de inasistencias, notas y pagos antes de darle opciones.
+      Sé extremadamente profesional, sofisticado y conciso. Mantén la estética "Dark/Gold Luxury".
+    `.trim();
+
+    // En AI SDK 6.0, streamText puede requerir await si se usa con ciertas configuraciones,
+    // pero aquí lo usamos para obtener el resultado del stream.
+    const result = streamText({
+      model: googleProvider('gemini-2.5-flash'),
+      messages: await convertToModelMessages(messages),
+      system: systemPrompt,
+      tools: {
+        getClientTransactionLogs
+      },
+      stopWhen: stepCountIs(5),
+      onFinish: async ({ text, toolCalls, toolResults, usage, finishReason }) => {
+        try {
+          const { Langfuse } = await import('langfuse');
+          const langfuse = new Langfuse({
+            publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+            secretKey: process.env.LANGFUSE_SECRET_KEY,
+            baseUrl: process.env.LANGFUSE_BASEURL || "https://cloud.langfuse.com"
+          });
+
+          const trace = langfuse.trace({
+            name: "salon-whatsapp-ai",
+            metadata: {
+              customerSearchTerm: customerSearchTerm || 'anonymous'
+            }
+          });
+
+          trace.generation({
+            name: "chat-completion",
+            model: "gemini-2.5-flash",
+            input: messages,
+            output: text,
+            usage: {
+              input: usage?.inputTokens || 0,
+              output: usage?.outputTokens || 0
+            },
+            metadata: {
+              toolCalls,
+              toolResults,
+              finishReason
+            }
+          });
+
+          await langfuse.flushAsync();
+        } catch (e) {
+          console.error("Error al enviar traza a Langfuse:", e);
+        }
+      }
+    });
+
+    return createTextStreamResponse({ textStream: result.textStream });
+
+  } catch (error) {
+    console.error("Error crítico en la ruta de Chat IA:", error);
+    return NextResponse.json(
+      { error: "Hubo un error al procesar la inteligencia artificial." }, 
+      { status: 500 }
+    );
+  }
 }

@@ -10,18 +10,19 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 interface SidebarProps {
   userName: string
   role: string
+  slug: string
 }
 
-export function Sidebar({ userName, role }: SidebarProps) {
+export function Sidebar({ userName, role, slug }: SidebarProps) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
   const links = [
-    { name: "Inicio", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Agenda", href: "/agenda", icon: Calendar },
-    ...(role === 'OWNER' ? [{ name: "CRM", href: "/crm", icon: Users }] : []),
-    { name: "Finanzas", href: "/finanzas", icon: Wallet },
-    { name: "Sillones", href: "/sillones", icon: Scissors },
+    { name: "Inicio", href: `/${slug}/dashboard`, icon: LayoutDashboard },
+    { name: "Agenda", href: `/${slug}/agenda`, icon: Calendar },
+    ...(role === 'OWNER' ? [{ name: "CRM", href: `/${slug}/crm`, icon: Users }] : []),
+    { name: "Finanzas", href: `/${slug}/finanzas`, icon: Wallet },
+    { name: "Sillones", href: `/${slug}/sillones`, icon: Scissors },
   ]
 
   const NavLinks = () => (

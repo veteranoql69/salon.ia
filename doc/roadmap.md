@@ -45,12 +45,13 @@ Por lo tanto, este Roadmap se ajusta para **iniciar directamente desde la transf
 - **Liquidadores Automáticos:** Unir el historial de la agenda con `brb_ledgers` para calcular la "deuda/pago" automático a fin de quincena/semana.
 - **🤖 Skills Activos:** `typescript-pro`, `react-patterns`.
 
-## 🟡 Sprint 4: La "IA Vigilante" (Whatsapp y Hub)
-**Objetivo:** Desarrollar e integrar el Agente Cognitivo para recepción de consultas por WhatsApp y generación de Insights.
-- **Agente Bot y Webhooks:** Setup del `POST /api/whatsapp` y verificación Meta Cloud API (Tiempos de respuesta < 3s).
-- **Vercel AI + Tools:** Implementar Tools para que el LLM agende turnos leyendo el inventario de la DB en tiempo real.
-- **Activity Log Base:** Tabla `brb_ai_activity_log` para persistir *Insights* ("Carlos lleva 3 meses sin venir").
-- **🤖 Skills Activos:** `whatsapp-api-expert`, `gemini-api-dev`, `ai-engineer`, `agent-tool-builder`.
+## 🟡 Sprint 4: La "IA Vigilante" Proactiva (Vercel AI SDK + Langfuse + Zod)
+**Objetivo:** Desarrollar e integrar un Agente Cognitivo verdaderamente inteligente que no solo reaccione a WhatsApp, sino que se anticipe usando el contexto transaccional del negocio, con observabilidad total.
+- **Orquestación con Vercel AI SDK:** Integración del SDK principal (`ai`, `@ai-sdk/google`) para gestionar la generación de texto (`streamText`) y la toma de decisiones estructurada (`generateObject`).
+- **Inyección de Contexto vía Zod Tools:** Creación de `src/lib/ai/tools.ts` utilizando Zod para tipar "Herramientas" que extraigan de manera autónoma logs transaccionales (citas pasadas, pagos, no-shows) desde Supabase (`brb_appointments`, `brb_ledgers`) cuando la IA necesite contexto de un cliente.
+- **Motor CRM Proactivo (Cron/Webhooks):** Desarrollo del endpoint `/api/ai/proactive-job` que evaluará en segundo plano métricas de retención ("Carlos lleva 3 meses sin venir") y desencadenará mensajes personalizados proactivamente.
+- **Observabilidad Total con Langfuse:** Implementación de la telemetría experimental de Vercel AI SDK con Langfuse para trazar latencias, consumo de tokens, uso de tools y depurar el árbol de decisiones del agente en el entorno de desarrollo local.
+- **🤖 Skills Activos:** `ai-engineer`, `gemini-api-dev`, `zod-validation-expert`, `agent-tool-builder`, `llm-evaluation`.
 
 ## 🟡 Sprint 5: Dashboard de Impacto y Realtime
 **Objetivo:** Terminar la vista gerencial con analíticas puras procesadas.
