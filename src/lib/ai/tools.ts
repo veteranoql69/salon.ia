@@ -2,18 +2,6 @@ import { z } from "zod";
 import { tool } from "ai";
 import { createClient } from "@supabase/supabase-js";
 
-// Inicializamos un cliente Supabase con privilegios de Service Role 
-// porque el agente de IA necesita acceder a los datos evadiendo el RLS de sesión de un usuario normal.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-/**
- * Tool: getClientTransactionLogs
- * Permite a la IA buscar el historial de un cliente y sus notas de CRM para
- * personalizar su respuesta y tomar decisiones proactivas.
- */
 export const getClientTransactionLogs = tool({
   description: "Obtiene el historial detallado de un cliente, incluyendo sus citas pasadas, su estado (completado, cancelado) y sus notas (CRM). Úsalo antes de agendar para conocer el contexto del cliente.",
   inputSchema: z.object({
@@ -21,9 +9,12 @@ export const getClientTransactionLogs = tool({
     limit: z.number().optional().default(5).describe("Cantidad de citas históricas a recuperar.")
   }),
   execute: async ({ searchTerm, limit }: { searchTerm: string, limit: number }) => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
     try {
       // 1. Buscar al cliente cruzando brb_customers y brb_profiles
-      // Se utiliza !inner para forzar el inner join
       const { data: customers, error } = await supabase
         .from('brb_customers')
         .select(`
