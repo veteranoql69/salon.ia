@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { joinProfessionalAction, getInviteInfoAction } from "@/modules/onboarding/actions";
@@ -17,7 +18,7 @@ const SPECIALTIES = [
 
 type OrgInfo = { name: string; slug: string | null };
 
-export default function InvitedOnboarding() {
+function InvitedOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code") ?? "";
@@ -218,5 +219,17 @@ export default function InvitedOnboarding() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InvitedOnboarding() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-16">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <InvitedOnboardingContent />
+    </Suspense>
   );
 }
